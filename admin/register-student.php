@@ -360,6 +360,59 @@ if (isset($_POST['submit'])) {
             animation: fadeIn 0.5s ease;
         }
         
+        /* Gender selection styles */
+        .gender-options {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+        
+        .gender-option {
+            flex: 1;
+            position: relative;
+        }
+        
+        .gender-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .gender-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 15px 10px;
+            border: 2px solid var(--light-gray);
+            border-radius: 10px;
+            background-color: #fafbff;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            min-height: 80px;
+        }
+        
+        .gender-label i {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: var(--gray);
+        }
+        
+        .gender-option input[type="radio"]:checked + .gender-label {
+            border-color: var(--primary);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .gender-option input[type="radio"]:checked + .gender-label i {
+            color: var(--primary);
+        }
+        
+        .gender-option input[type="radio"]:checked + .gender-label span {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
         /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -370,6 +423,10 @@ if (isset($_POST['submit'])) {
         @media (max-width: 992px) {
             .form-grid {
                 grid-template-columns: 1fr;
+            }
+            
+            .gender-options {
+                flex-direction: column;
             }
         }
         
@@ -465,10 +522,10 @@ if (isset($_POST['submit'])) {
                                 
                                 <div class="form-grid">
                                     <div class="form-group">
-                                        <label for="cms">CMS ID</label>
+                                        <label for="cms">Enrollment No</label>
                                         <div class="input-icon">
                                             <i class="fas fa-id-card"></i>
-                                            <input type="text" id="cms" name="cms" class="form-control" placeholder="Enter CMS ID" required>
+                                            <input type="text" id="cms" name="cms" class="form-control" placeholder="Enter Enrollment no." required>
                                         </div>
                                         <div class="error-message">Please enter a valid CMS ID</div>
                                     </div>
@@ -492,23 +549,31 @@ if (isset($_POST['submit'])) {
                                     </div>
                                     
                                     <div class="form-group">
-                                        <label for="cnic">CNIC</label>
+                                        <label for="cnic">GR No.</label>
                                         <div class="input-icon">
                                             <i class="fas fa-address-card"></i>
-                                            <input type="text" id="cnic" name="cnic" class="form-control" placeholder="Enter CNIC without dashes" required>
+                                            <input type="text" id="cnic" name="cnic" class="form-control" placeholder="Enter GR No. without dashes" required>
                                         </div>
                                         <div class="error-message">Please enter a valid CNIC</div>
                                     </div>
                                     
                                     <div class="form-group">
-                                        <label for="gender">Gender</label>
-                                        <div class="input-icon">
-                                            <i class="fas fa-venus-mars"></i>
-                                            <select id="gender" name="gender" class="form-control" required>
-                                                <option value="">--Select Gender--</option>
-                                                <option value="Male">Male</option>
-                                                <option value="Female">Female</option>
-                                            </select>
+                                        <label>Gender</label>
+                                        <div class="gender-options">
+                                            <div class="gender-option">
+                                                <input type="radio" id="gender-male" name="gender" value="Male" required>
+                                                <label class="gender-label" for="gender-male">
+                                                    <i class="fas fa-male"></i>
+                                                    <span>Male</span>
+                                                </label>
+                                            </div>
+                                            <div class="gender-option">
+                                                <input type="radio" id="gender-female" name="gender" value="Female" required>
+                                                <label class="gender-label" for="gender-female">
+                                                    <i class="fas fa-female"></i>
+                                                    <span>Female</span>
+                                                </label>
+                                            </div>
                                         </div>
                                         <div class="error-message">Please select a gender</div>
                                     </div>
@@ -720,6 +785,17 @@ if (isset($_POST['submit'])) {
                         $('#cnic').addClass('error');
                         isValid = false;
                     }
+                    
+                    // Validate gender selection
+                    const genderSelected = $('input[name="gender"]:checked').length > 0;
+                    if (!genderSelected) {
+                        $('.gender-options').addClass('error');
+                        $('.gender-options').siblings('.error-message').show();
+                        isValid = false;
+                    } else {
+                        $('.gender-options').removeClass('error');
+                        $('.gender-options').siblings('.error-message').hide();
+                    }
                 }
                 
                 if (sectionId === '#section2') {
@@ -771,6 +847,12 @@ if (isset($_POST['submit'])) {
             $('.form-control').on('input', function() {
                 $(this).removeClass('error');
                 $(this).siblings('.error-message').hide();
+            });
+            
+            // Gender selection styling
+            $('input[name="gender"]').change(function() {
+                $('.gender-options').removeClass('error');
+                $('.gender-options').siblings('.error-message').hide();
             });
             
             // Help button
