@@ -1,82 +1,3 @@
-<?php
-session_start();
-include('../includes/dbconn.php');
-include('../includes/check-login.php');
-check_login();
-
-if(isset($_POST['submit']))
-{
-    $fee = $_POST['fee'];
-    $due = $_POST['due'];
-    $status = "unpaid";
-    $type = $_POST['type'];
-    
-    // Use the correct session variable name (hid instead of Hid)
-    $hid = $_SESSION['hid'];
-    
-    $ret = "SELECT * FROM student WHERE shid = $hid";
-    $stmt = $conn->prepare($ret);   // ✅ use $conn not $mysqli
-    $stmt->execute();
-    $res = $stmt->get_result();
-    
-    while($row = $res->fetch_object())
-    {
-        $cms = $row->CMS;
-        $sql = mysqli_query($conn, "INSERT INTO invoice(cms, iamount, itype, iduedate, status) 
-                                    VALUES('$cms', '$fee', '$type', '$due', '$status')"); // ✅ use $conn
-    }
-    
-    if($sql)
-    {
-        echo "<script>alert('Student Fee updated successfully');</script>";
-        echo "<script>window.location.href ='fee.php'</script>";
-    }
-}
-
-// Get statistics for dashboard
-$hid = $_SESSION['hid'];
-
-// Total Students
-$total_query = "SELECT COUNT(*) as total FROM student WHERE shid = $hid";
-$total_result = $conn->query($total_query);
-$total_students = $total_result ? $total_result->fetch_assoc()['total'] : 0;
-
-// Total Fees Generated
-$fees_query = "SELECT COUNT(*) as total_fees FROM invoice i 
-               JOIN student s ON i.cms = s.CMS 
-               WHERE s.shid = $hid";
-$fees_result = $conn->query($fees_query);
-$total_fees = $fees_result ? $fees_result->fetch_assoc()['total_fees'] : 0;
-
-// Paid Fees
-$paid_query = "SELECT COUNT(*) as paid FROM invoice i 
-               JOIN student s ON i.cms = s.CMS 
-               WHERE s.shid = $hid AND i.status = 'paid'";
-$paid_result = $conn->query($paid_query);
-$paid_fees = $paid_result ? $paid_result->fetch_assoc()['paid'] : 0;
-
-// Unpaid Fees
-$unpaid_query = "SELECT COUNT(*) as unpaid FROM invoice i 
-                 JOIN student s ON i.cms = s.CMS 
-                 WHERE s.shid = $hid AND i.status = 'unpaid'";
-$unpaid_result = $conn->query($unpaid_query);
-$unpaid_fees = $unpaid_result ? $unpaid_result->fetch_assoc()['unpaid'] : 0;
-
-// Get recent fee records
-$recent_query = "SELECT i.*, s.SName, s.SRNo 
-                 FROM invoice i 
-                 JOIN student s ON i.cms = s.CMS 
-                 WHERE s.shid = $hid 
-                 ORDER BY i.iduedate DESC 
-                 LIMIT 5";
-$recent_result = $conn->query($recent_query);
-
-$has_recent_records = $recent_result && $recent_result->num_rows > 0;
-?>
-
-
-
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -269,12 +190,22 @@ $has_recent_records = $recent_result && $recent_result->num_rows > 0;
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .form-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.07);
         }
         
         .form-card h4 {
             color: var(--primary);
             margin-bottom: 15px;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         .form-control {
@@ -282,11 +213,94 @@ $has_recent_records = $recent_result && $recent_result->num_rows > 0;
             border-radius: 8px;
             padding: 12px 15px;
             transition: all 0.3s ease;
+            font-size: 1rem;
+            height: auto;
         }
         
         .form-control:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 0.2rem rgba(67, 97, 238, 0.25);
+        }
+        
+        /* Custom Select Styling */
+        .select-container {
+            position: relative;
+        }
+        
+        .select-container::after {
+            content: "\f078";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--gray);
+        }
+        
+        select.form-control {
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-color: white;
+            cursor: pointer;
+        }
+        
+        select.form-control option {
+            padding: 10px;
+        }
+        
+        select.form-control:focus {
+            background-color: #fff;
+        }
+        
+        /* Fee Type Specific Styling */
+        .form-card.fee-type-card {
+            border-left-color: var(--info);
+        }
+        
+        .form-card.fee-type-card:hover {
+            border-left-color: var(--primary);
+        }
+        
+        .fee-type-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .fee-type-option {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid var(--light-gray);
+        }
+        
+        .fee-type-option:hover {
+            background: #f0f4ff;
+            border-color: var(--primary);
+        }
+        
+        .fee-type-option.selected {
+            background: #e6eeff;
+            border-color: var(--primary);
+        }
+        
+        .fee-type-option input[type="radio"] {
+            margin-right: 10px;
+            accent-color: var(--primary);
+        }
+        
+        .fee-type-icon {
+            margin-right: 10px;
+            width: 24px;
+            text-align: center;
+            color: var(--primary);
         }
         
         .btn-success {
@@ -457,6 +471,10 @@ $has_recent_records = $recent_result && $recent_result->num_rows > 0;
             .quick-actions {
                 grid-template-columns: 1fr;
             }
+            
+            .fee-type-options {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -592,16 +610,39 @@ $has_recent_records = $recent_result && $recent_result->num_rows > 0;
                                 </div>
                             </div>
                             <div class="col-sm-12 col-md-6 col-lg-4">
-                                <div class="form-card">
+                                <div class="form-card fee-type-card">
                                     <h4><i class="fas fa-tag"></i> Fee Type</h4>
                                     <div class="form-group">
-                                        <select name="type" class="form-control" required>
-                                            <option value="">Select fee type</option>
-                                            <option value="Hostel">Hostel Fee</option>
-                                            <option value="Mess">Mess Fee</option>
-                                            <option value="Other">Other Fee</option>
-                                        </select>
+                                        <div class="select-container">
+                                            <select name="type" class="form-control" required>
+                                                <option value="">Select fee type</option>
+                                                <option value="Hostel">Hostel Fee</option>
+                                                <option value="Mess">Mess Fee</option>
+                                                <option value="Other">Other Fee</option>
+                                            </select>
+                                        </div>
                                     </div>
+                                    
+                                    <!-- Alternative radio button option (uncomment to use) -->
+                                    <!--
+                                    <div class="fee-type-options">
+                                        <label class="fee-type-option">
+                                            <input type="radio" name="type" value="Hostel" required>
+                                            <span class="fee-type-icon"><i class="fas fa-building"></i></span>
+                                            <span>Hostel Fee</span>
+                                        </label>
+                                        <label class="fee-type-option">
+                                            <input type="radio" name="type" value="Mess">
+                                            <span class="fee-type-icon"><i class="fas fa-utensils"></i></span>
+                                            <span>Mess Fee</span>
+                                        </label>
+                                        <label class="fee-type-option">
+                                            <input type="radio" name="type" value="Other">
+                                            <span class="fee-type-icon"><i class="fas fa-file-invoice"></i></span>
+                                            <span>Other Fee</span>
+                                        </label>
+                                    </div>
+                                    -->
                                 </div>
                             </div>
                             <div class="col-sm-12 col-md-6 col-lg-4">
@@ -743,6 +784,22 @@ $has_recent_records = $recent_result && $recent_result->num_rows > 0;
             
             // Focus on fee amount field
             $('input[name="fee"]').focus();
+            
+            // Enhanced select styling
+            $('select.form-control').on('change', function() {
+                if($(this).val() !== '') {
+                    $(this).css('color', '#212529');
+                } else {
+                    $(this).css('color', '#6c757d');
+                }
+            });
+            
+            // For the radio button alternative (if used)
+            $('.fee-type-option').click(function() {
+                $('.fee-type-option').removeClass('selected');
+                $(this).addClass('selected');
+                $(this).find('input[type="radio"]').prop('checked', true);
+            });
         });
     </script>
 

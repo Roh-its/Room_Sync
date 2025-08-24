@@ -247,7 +247,7 @@ $recent_result = mysqli_query($conn, $recent_query);
                             <p><?php echo $pending_count; ?> complaints</p>
                         </div>
                     </div>
-                    <div class="status-item progress">
+                    <div class="status-item pending">
                         <div class="status-icon"><i class="fas fa-spinner"></i></div>
                         <div class="status-info">
                             <h4>In Progress</h4>
