@@ -1,3 +1,114 @@
+<?php
+session_start();
+include('../includes/dbconn.php');
+include('../includes/check-login.php');
+check_login();
+
+$hid = $_SESSION['hid']; // Hostel ID from session
+
+/* =========================
+   1) Handle fee generation
+   ========================= */
+if (isset($_POST['submit'])) {
+    $fee  = mysqli_real_escape_string($conn, $_POST['fee']);
+    $type = mysqli_real_escape_string($conn, $_POST['type']);
+    $due  = mysqli_real_escape_string($conn, $_POST['due']);
+
+    // All students for this hostel
+    $students = mysqli_query($conn, "SELECT cms FROM student WHERE shid = '$hid'");
+
+    if ($students && mysqli_num_rows($students) > 0) {
+        while ($stu = mysqli_fetch_assoc($students)) {
+            $cms = $stu['cms'];
+
+            // Prevent duplicates: same CMS + IType + IDueDate
+            $check = mysqli_query(
+                $conn,
+                "SELECT 1 FROM invoice WHERE CMS='$cms' AND IType='$type' AND IDueDate='$due' LIMIT 1"
+            );
+
+            if ($check && mysqli_num_rows($check) == 0) {
+                mysqli_query(
+                    $conn,
+                    "INSERT INTO invoice (IType, IDueDate, IAmount, CMS, Status)
+                     VALUES ('$type', '$due', '$fee', '$cms', 'Unpaid')"
+                );
+            }
+        }
+        // (Optional) $msg = "Fees generated successfully.";
+    } else {
+        // (Optional) $msg = "No students found for this hostel.";
+    }
+}
+
+/* =========================
+   2) Dashboard numbers (COUNTS)
+   These match your UI labels:
+   - $total_students
+   - $total_fees      (count of invoices)
+   - $paid_fees       (count of PAID invoices)
+   - $unpaid_fees     (count of UNPAID invoices)
+   ========================= */
+$total_students = 0;
+$res = mysqli_query($conn, "SELECT COUNT(*) AS total FROM student WHERE shid = '$hid'");
+if ($res) { $row = mysqli_fetch_assoc($res); $total_students = (int)$row['total']; }
+
+$total_fees = 0;
+$res = mysqli_query(
+    $conn,
+    "SELECT COUNT(*) AS total
+     FROM invoice i
+     INNER JOIN student s ON i.CMS = s.cms
+     WHERE s.shid = '$hid'"
+);
+if ($res) { $row = mysqli_fetch_assoc($res); $total_fees = (int)$row['total']; }
+
+$paid_fees = 0;
+$res = mysqli_query(
+    $conn,
+    "SELECT COUNT(*) AS total
+     FROM invoice i
+     INNER JOIN student s ON i.CMS = s.cms
+     WHERE i.Status='Paid' AND s.shid = '$hid'"
+);
+if ($res) { $row = mysqli_fetch_assoc($res); $paid_fees = (int)$row['total']; }
+
+$unpaid_fees = 0;
+$res = mysqli_query(
+    $conn,
+    "SELECT COUNT(*) AS total
+     FROM invoice i
+     INNER JOIN student s ON i.CMS = s.cms
+     WHERE i.Status='Unpaid' AND s.shid = '$hid'"
+);
+if ($res) { $row = mysqli_fetch_assoc($res); $unpaid_fees = (int)$row['total']; }
+
+/* =========================
+   3) Recent fee records
+   Alias column names to the lowercase keys your HTML uses:
+   - itype, iduedate, iamount, status
+   Keep SName and SRNo with same case as your HTML expects.
+   ========================= */
+$recent_result = mysqli_query(
+    $conn,
+    "SELECT 
+        i.IID,
+        i.IType   AS itype,
+        i.IDueDate AS iduedate,
+        i.IAmount AS iamount,
+        i.Status  AS status,
+        s.SName,
+        s.SRNo
+     FROM invoice i
+     INNER JOIN student s ON i.CMS = s.cms
+     WHERE s.shid = '$hid'
+     ORDER BY i.IID DESC
+     LIMIT 5"
+);
+$has_recent_records = ($recent_result && mysqli_num_rows($recent_result) > 0);
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 

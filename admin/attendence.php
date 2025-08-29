@@ -11,7 +11,7 @@ error_log("Session variables: " . print_r($_SESSION, true));
 if(isset($_POST['submit']))
 {
     $enrollment = $_POST['enrollment'];
-    $date = $_POST['date'];
+    $date = date('Y-m-d'); // Always use today's date
     $status = "Present";
     
     // Check if student exists with this enrollment number
@@ -31,6 +31,9 @@ if(isset($_POST['submit']))
             $sql = mysqli_query($conn, "INSERT INTO student_attendance(SADate,Status,CMS) VALUES('$date','$status', '$enrollment')");
             if($sql) {
                 echo "<script>alert('Attendance Marked successfully');</script>";
+                
+                // After successful insertion, refresh the page to update statistics
+                echo "<script>setTimeout(function() { window.location.reload(); }, 500);</script>";
             } else {
                 echo "<script>alert('Error marking attendance');</script>";
             }
@@ -103,12 +106,37 @@ if ($unknown_result) {
 
 // Get recent attendance records - only if hid is available
 if ($hid) {
-    $recent_query = "SELECT sa.*, s.SName, s.SRNo 
-                     FROM student_attendance sa 
-                     JOIN student s ON sa.CMS = s.CMS 
-                     WHERE s.SHID = '$hid' 
-                     ORDER BY sa.SADate DESC 
-                     LIMIT 5";
+    // First check what columns exist in the student_attendance table
+    $check_columns_query = "SHOW COLUMNS FROM student_attendance";
+    $columns_result = $conn->query($check_columns_query);
+    $has_id_column = false;
+    
+    if ($columns_result) {
+        while ($column = $columns_result->fetch_assoc()) {
+            if ($column['Field'] == 'id' || $column['Field'] == 'attendance_id' || $column['Field'] == 'ID') {
+                $has_id_column = true;
+                $id_column_name = $column['Field'];
+                break;
+            }
+        }
+    }
+    
+    // Build the query based on available columns
+    if ($has_id_column) {
+        $recent_query = "SELECT sa.*, s.SName, s.SRNo 
+                         FROM student_attendance sa 
+                         JOIN student s ON sa.CMS = s.CMS 
+                         WHERE s.SHID = '$hid' 
+                         ORDER BY sa.SADate DESC, sa.$id_column_name DESC 
+                         LIMIT 5";
+    } else {
+        $recent_query = "SELECT sa.*, s.SName, s.SRNo 
+                         FROM student_attendance sa 
+                         JOIN student s ON sa.CMS = s.CMS 
+                         WHERE s.SHID = '$hid' 
+                         ORDER BY sa.SADate DESC 
+                         LIMIT 5";
+    }
     $recent_result = $conn->query($recent_query);
 } else {
     // If no hid, get recent records for all hostels (limited functionality)
@@ -347,6 +375,43 @@ if ($hid) {
             transform: translateY(-2px);
         }
         
+        /* Date Display in Form */
+        .date-display-form {
+            background: var(--primary);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .date-display-form h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+        }
+        
+        .date-display-form .date {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+        
+        /* Form Layout */
+        .form-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .form-date-col {
+            flex: 1;
+        }
+        
+        .form-input-col {
+            flex: 2;
+        }
+        
         /* Recent Activity */
         .recent-activity {
             background: white;
@@ -442,6 +507,10 @@ if ($hid) {
         @media (max-width: 992px) {
             .dashboard-cards {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .form-row {
+                flex-direction: column;
             }
             
             .quick-actions {
@@ -592,20 +661,21 @@ if ($hid) {
                     </div>
                     
                     <form method="POST">
-                        <div class="row">
-                            <div class="col-sm-12 col-md-6 col-lg-4">
+                        <div class="form-row">
+                            <!-- Today's Date Display -->
+                            <div class="form-date-col">
+                                <div class="date-display-form">
+                                    <h3>Today's Date</h3>
+                                    <div class="date"><?php echo date('F j, Y'); ?></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Student ID Input -->
+                            <div class="form-input-col">
                                 <div class="form-card">
                                     <h4><i class="fas fa-id-card"></i> STUDENT ID</h4>
                                     <div class="form-group">
                                         <input type="text" name="enrollment" class="form-control" placeholder="Enter Student ID" required>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-sm-12 col-md-6 col-lg-4">
-                                <div class="form-card">
-                                    <h4><i class="fas fa-calendar"></i> Date</h4>
-                                    <div class="form-group">
-                                        <input type="date" name="date" class="form-control" value="<?php echo date('Y-m-d')?>" required>
                                     </div>
                                 </div>
                             </div>

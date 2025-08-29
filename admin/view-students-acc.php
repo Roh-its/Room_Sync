@@ -305,7 +305,7 @@ if (isset($_GET['del'])) {
                                                         <td>
                                                             <?php 
                                                             if ($row->SGender == 'Male') {
-                                                                echo '<span class="badge status-badge bg-info">Male</span>';
+                                                                echo '<span class="badge status-badge bg-info text-dark">Male</span>';
                                                             } else {
                                                                 echo '<span class="badge status-badge bg-warning text-dark">Female</span>';
                                                             }
